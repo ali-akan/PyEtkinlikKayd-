@@ -87,7 +87,7 @@ class EventRegistrationApp(QWidget):
         self.setMinimumSize(400, 200)
 
         vbox = QVBoxLayout(self)
-
+        vbox.setSpacing(25)
         entries = [
             ("İsim:", ""),
             ("Soyisim:", ""),
@@ -96,6 +96,8 @@ class EventRegistrationApp(QWidget):
         self.entry_widgets = {}
         for label_text, default_text in entries:
             hbox = QHBoxLayout()
+            hbox.setSpacing(15)
+
             label = QLabel(label_text, self)
             label_font = QFont('Arial', 12)
             label_font.setBold(True)
