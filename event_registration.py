@@ -1,37 +1,38 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, QComboBox, QMessageBox
-from PyQt5.QtGui import QIcon, QFont, QColor
+from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtCore import Qt
+
 import csv
 import os
 from datetime import datetime
 
 CSV_FILE = 'katilimcilar.csv'
 
+
 def create_csv_file():
-    """Create the CSV file if it doesn't exist."""
     if not os.path.exists(CSV_FILE):
         with open(CSV_FILE, mode='w', newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
             writer.writerow(["İsim", "Soyisim", "Doğum Tarihi"])
 
+
 def is_valid_date(date_text):
-    """Check if the date string is a valid date."""
     try:
         datetime.strptime(date_text, '%d/%m/%Y')
         return True
     except ValueError:
         return False
 
+
 def is_valid_input(name, surname, dob):
-    """Check if the input fields are valid."""
-    if not name or not surname or not dob:
+    if not name.strip() or not surname.strip() or not dob.strip():
         raise ValueError("Tüm alanları doldurun!")
     if not is_valid_date(dob):
         raise ValueError("Doğru tarih formatını kullanın (Gün/Ay/Yıl)")
 
+
 def check_existing_record(name, surname, dob):
-    """Check if a record already exists in the CSV file."""
     with open(CSV_FILE, mode='r', newline='', encoding='utf-8') as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
@@ -39,11 +40,11 @@ def check_existing_record(name, surname, dob):
                 return True
     return False
 
+
 def save_entry(name, surname, dob, combo_records):
-    """Save entry to the CSV file."""
     try:
         is_valid_input(name, surname, dob)
-        
+
         if check_existing_record(name, surname, dob):
             QMessageBox.information(None, "Bilgi", "Bu kayıt zaten mevcut.")
             return
@@ -53,20 +54,27 @@ def save_entry(name, surname, dob, combo_records):
             writer.writerow([name, surname, dob])
 
         QMessageBox.information(None, "Başarılı", "Kayıt başarıyla eklendi!")
+        new_record = f"{name}, {surname}, {dob}"
+
         combo_records.clear()
         combo_records.addItems(load_records())
+
+        index = combo_records.findText(new_record)
+        if index != -1:
+            combo_records.setCurrentIndex(index)
     except ValueError as e:
         QMessageBox.warning(None, "Hata", str(e))
 
+
 def load_records():
-    """Load records from the CSV file."""
     records = []
     with open(CSV_FILE, mode='r', newline='', encoding='utf-8') as csvfile:
         reader = csv.reader(csvfile)
-        next(reader)  
+        next(reader)
         for row in reader:
             records.append(', '.join(row))
     return records
+
 
 class EventRegistrationApp(QWidget):
     def __init__(self):
@@ -76,8 +84,7 @@ class EventRegistrationApp(QWidget):
     def initUI(self):
         self.setWindowTitle('Etkinlik Kaydı')
         self.setWindowIcon(QIcon('icon.png'))
-        self.setMinimumSize(400, 200)  
-        self.setStyleSheet("background-color: #f0f0f0;")
+        self.setMinimumSize(400, 200)
 
         vbox = QVBoxLayout(self)
 
@@ -90,51 +97,52 @@ class EventRegistrationApp(QWidget):
         for label_text, default_text in entries:
             hbox = QHBoxLayout()
             label = QLabel(label_text, self)
-            label.setFont(QFont('Arial', 12))
+            label_font = QFont('Arial', 12)
+            label_font.setBold(True)
+            label.setFont(label_font)
             hbox.addWidget(label)
             entry = QLineEdit(default_text, self)
-            entry.setStyleSheet("background-color: white; color: black;")
+            entry_font = QFont('Arial', 12)
+            entry.setFont(entry_font)
             hbox.addWidget(entry)
             vbox.addLayout(hbox)
             self.entry_widgets[label_text] = entry
 
         self.register_button = QPushButton('Kaydet', self)
-        self.register_button.setStyleSheet("background-color: #4CAF50; color: white; border-radius: 5px; height: 25px;")
         self.register_button.clicked.connect(self.register)
+        self.register_button.setStyleSheet(
+            "background-color: #4CAF50; color: white; border-radius: 5px;")
+        self.register_button.setMinimumHeight(25)
         vbox.addWidget(self.register_button)
 
         self.dropdown_label = QLabel('Kayıtlar:', self)
-        self.dropdown_label.setFont(QFont('Arial', 12))
+        self.dropdown_label_font = QFont('Arial', 12)
+        self.dropdown_label_font.setBold(True)
+        self.dropdown_label.setFont(self.dropdown_label_font)
         vbox.addWidget(self.dropdown_label)
         self.dropdown_menu = QComboBox(self)
-        self.dropdown_menu.setStyleSheet(
-            """
-            QComboBox {
-                background-color: white;
-                color: black;
-                border: 1px solid #4CAF50;
-                padding: 5px;
-                border-radius: 5px;
-                min-width: 10em;
-            }
-            QComboBox::drop-down {
-                subcontrol-origin: padding;
-                subcontrol-position: right center;
-                width: 20px;
-               
-            }
-            """
-        )
+        self.dropdown_menu_font = QFont('Arial', 12)
+        self.dropdown_menu.setFont(self.dropdown_menu_font)
+        self.dropdown_menu.currentIndexChanged.connect(
+            self.display_selected_record)
         vbox.addWidget(self.dropdown_menu)
         self.dropdown_menu.addItems(load_records())
 
-        vbox.addStretch(1)  
+        vbox.addStretch(1)
         self.setLayout(vbox)
 
     def register(self):
-        """Handler for registration button click."""
         save_entry(self.entry_widgets["İsim:"].text(), self.entry_widgets["Soyisim:"].text(),
                    self.entry_widgets["Doğum Tarihi (Gün/Ay/Yıl):"].text(), self.dropdown_menu)
+
+    def display_selected_record(self, index):
+        if index == -1:
+            return
+        record = self.dropdown_menu.currentText().split(', ')
+        self.entry_widgets["İsim:"].setText(record[0])
+        self.entry_widgets["Soyisim:"].setText(record[1])
+        self.entry_widgets["Doğum Tarihi (Gün/Ay/Yıl):"].setText(record[2])
+
 
 def main():
     create_csv_file()
@@ -142,6 +150,7 @@ def main():
     ex = EventRegistrationApp()
     ex.show()
     sys.exit(app.exec_())
+
 
 if __name__ == "__main__":
     main()
